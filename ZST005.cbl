@@ -118,7 +118,10 @@ ZM0018     03  MLTSOC-BCK                 PIC X.
 ZM0018     03  ACCNUM.           
 ZM0018         05  ACCNUM-FIR             PIC 9(03).           
 ZM0018         05  ACCNUM-LST             PIC 9(27).
-
+ZZ01XX     03 TABDEL OCCURS 20
+ZZ01XX         05 REFLOT-DEL              PIC X(10).
+ZZ01XX         05 NUMTEC-DEL              PIC X(06).
+ZZ01XX     03 I4                          PIC 9(02).
 
        01  CWITF.
            COPY CW-ITF. 
@@ -397,12 +400,16 @@ ZZ00AL         MOVE "Y"                    TO SWIZER OF WORKER
 ZZ00AL         MOVE "N"                    TO SWITOT OF WORKER
 ZZ00AL         MOVE "0"                    TO I3     OF WORKER
 ZZ00A0         MOVE DEDTOT OF ZSL04-01     TO DEDTOT OF WORKER
+ZZ01XX
+ZZ01XX         MOVE "0"                    TO I4     OF WORKER
 ZZ00A0      END-IF
 
             IF TYPROW OF ZSL04-01 NOT = "0"
 ZZ00AL         MOVE "N"                    TO SWIZER OF WORKER
 ZZ00AL         ADD 1 TO I3 OF WORKER 
 ZZ00AL         GIVING I3 OF WORKER
+
+ZZ01XX         ADD 1 TO I4 OF WORKER GIVING I4       OF WORKER
 
       * Check that repayment month is format YYYYMM
       *
