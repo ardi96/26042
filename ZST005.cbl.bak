@@ -118,9 +118,10 @@ ZM0018     03  MLTSOC-BCK                 PIC X.
 ZM0018     03  ACCNUM.           
 ZM0018         05  ACCNUM-FIR             PIC 9(03).           
 ZM0018         05  ACCNUM-LST             PIC 9(27).
-ZZ01H8     03 TABDEL OCCURS 20
-ZZ01H8         05 REFLOT-DEL              PIC X(10).
-ZZ01H8         05 NUMTEC-DEL              PIC X(06).
+ZZ01XX     03 TABDEL OCCURS 20
+ZZ01XX         05 REFLOT-DEL              PIC X(10).
+ZZ01XX         05 NUMTEC-DEL              PIC X(06).
+ZZ01XX     03 I4                          PIC 9(02).
 
        01  CWITF.
            COPY CW-ITF. 
@@ -247,7 +248,6 @@ ZZ00AL  MOVE SPACES               TO  SWITOT OF WORKER.
               PERFORM START-ZSD05 THRU START-ZSD05-FN
         END-EVALUATE.
         
-ZZ01X8  MOVE "N"                  TO SWIDEL OF WORKER. 
 
       *--> Loop
         PERFORM LOOP-REC THRU LOOP-REC-FN
@@ -389,36 +389,25 @@ ZZ00AL            IF DEDTOT OF WORKER > 0
 ZZ00AL               MOVE "Y"                    TO SWIAMT OF WORKER
 ZZ00AL               MOVE "07"                   TO CODERR OF WORKER
 ZZ00AL               MOVE "Y"                    TO SWIERR OF WORKER
-ZZ01X8                                              SWIDEL OF WORKER
 ZZ00AL               MOVE I3 OF WORKER           TO SWIMAX OF WORKER
 ZZ00AL               PERFORM REWRITE-AGD06 THRU REWRITE-AGD06-FN
 ZZ00AL            ELSE
 ZZ00AL               MOVE "N"                    TO SWIAMT OF WORKER
 ZZ00AL            END-IF
 ZZ00AL         END-IF
-
-ZZ01X8* Check if program reach another "0" and one of the "1" record
-ZZ01X8* is in error (SWIDEL=Y) then delete those records 
-ZZ01X8* and execute Auto Splitting
-
-ZZ01X8         IF SWIDEL OF WORKER = "Y"
-   
-ZZ01X8* Notes:    I3 sudah dipakai di atas, mungkin value berubah
-ZZ01X8            MOVE I3 OF WORKER             TO SWIMAX OF WORKER
-ZZ01X8            PERFORM DELETE-AGD06 THRU DELETE-AGD06-FN
-ZZ01X8*
-ZZ01X8*           check if any errors occur   
-ZZ01X8*
-ZZ01X8            PERFORM AUTO-SPLITTING THRU AUTO-SPLITTING-FN 
-ZZ01X8         END-IF
-ZZ01X8         
-ZZ01X8         MOVE "N"                    TO SWIDEL OF WORKER
-
+ZZ01XX
+ZZ01XX         IF SWIDEL OF WORKER = "Y" 
+ZZ01XX            PERFORM RESET-AGD06 THRU RESET-AGD06-FN   
+ZZ01XX         END-IF
 ZZ00AL
 ZZ00AL         MOVE "Y"                    TO SWIZER OF WORKER
 ZZ00AL         MOVE "N"                    TO SWITOT OF WORKER
 ZZ00AL         MOVE "0"                    TO I3     OF WORKER
 ZZ00A0         MOVE DEDTOT OF ZSL04-01     TO DEDTOT OF WORKER
+ZZ01XX
+ZZ01XX  
+ZZ01XX         MOVE "0"                    TO I4     OF WORKER
+ZZ01XX         MOVE "N"                    TO SWIDEL OF WORKER 
 ZZ00A0      END-IF
 
             IF TYPROW OF ZSL04-01 NOT = "0"
@@ -426,13 +415,13 @@ ZZ00AL         MOVE "N"                    TO SWIZER OF WORKER
 ZZ00AL         ADD 1 TO I3 OF WORKER 
 ZZ00AL         GIVING I3 OF WORKER
 
+ZZ01XX         ADD 1 TO I4 OF WORKER GIVING I4       OF WORKER
 
       * Check that repayment month is format YYYYMM
       *
               PERFORM CHECK-RPYMTH THRU CHECK-RPYMTH-FN
 
               IF SWIERR OF WORKER = "Y"
-ZZ01X8          MOVE "Y"                   TO SWIDEL OF WORKER
                 PERFORM WRITE-AGD06 THRU WRITE-AGD06-FN
                 @READNX,ZSL04-01,XX
                 GO LOOP-REC-FN 
@@ -461,7 +450,6 @@ ZZ0088        END-STRING
 ZZ0088*       PERFORM MAPPING THRU MAPPING-FN 
 ZZ0088        PERFORM READ-ZZ4 THRU READ-ZZ4-FN
               IF SWIERR OF WORKER ="Y"
-ZZ01X8           MOVE "Y"                   TO SWIDEL OF WORKER 
                  PERFORM WRITE-AGD06 THRU WRITE-AGD06-FN
               ELSE
                  PERFORM LUMP-SUM    THRU LUMP-SUM-FN
@@ -828,6 +816,10 @@ ZZ00AL   MOVE NUMTEC OF AGD06-01      TO NUMTEC-TEM OF WORKER(I3).
              @CWERR,ZST005,"ZST00503","AGD06-01",\
                            ,"I","1","5","Y","15"
           END-IF.
+
+ZZ01XX    ADD  1 TO I4 OF WORKER          GIVING I4 OF WORKER.
+ZZ01XX    MOVE REFLOT OF AGD06-01     TO REFLOT-DEL OF WORKER(I4).
+ZZ01XX    MOVE NUMTEC OF AGD06-01     TO NUMTEC-DEL OF WORKER(I4).
       
         WRITE-AGD06-FN.
       *----------------*
@@ -1277,6 +1269,9 @@ ZZ00AL   MOVE NUMTEC OF AGD06-01      TO NUMTEC-TEM OF WORKER(I3).
                            ,"I","1","5","Y","15"
           END-IF.
 
+ZZ01XX    ADD 1 TO I4 OF WORKER GIVING I4 OF WORKER.
+ZZ01XX    MOVE REFLOT OF AGD06-01     TO REFLOT-DEL OF WORKER(I4).
+ZZ01XX    MOVE NUMTEC OF AGD06-01     TO NUMTEC-DEL OF WORKER(I4).
 
         WRITE-AGD06-TAB-FN.
       *--------------------*
@@ -1339,31 +1334,32 @@ ZZ00AL   MOVE NUMTEC OF AGD06-01      TO NUMTEC-TEM OF WORKER(I3).
       *-------------*
            EXIT.
 
-ZZ01H8 DELETE-AGD06.
-ZZ01H8*--------------*
-ZZ01H8
-ZZ01H8    MOVE 1     TO                        I1 OF WORKER.
-ZZ01H8    PERFORM VARYING I3 FROM 1 BY 1 UNTIL I3 > SWIMAX OF WORKER
-ZZ01H8      INITIALIZE AGD06-01
-ZZ01H8      MOVE  REFLOT-DEL OF WORKER(I1) TO REFLOT OF AGD06-01
-ZZ01H8      MOVE  NUMTEC-DEL OF WORKER(I1) TO NUMTEC OF AGD06-01
-ZZ01H8      @READZ,"1",AGD06-01,XX
-ZZ01H8      IF ACCESS-OK 
-ZZ01H8         @DELETE,AGD06-01,XX
-ZZ01H8      END-IF   
-ZZ01H8    END-PERFORM.
+ZZ01XX RESET-AGD06.
+ZZ01XX*--------------*
+ZZ01XX
+ZZ01XX    MOVE 1     TO                        I1 OF WORKER.
+ZZ01XX    PERFORM VARYING I1 FROM 1 BY 1 
+ZZ01XX    UNTIL I1 >= I4 OF WORKER
+ZZ01XX      INITIALIZE AGD06-01
+ZZ01XX      MOVE  REFLOT-DEL OF WORKER(I1) TO REFLOT OF AGD06-01
+ZZ01XX      MOVE  NUMTEC-DEL OF WORKER(I1) TO NUMTEC OF AGD06-01
+ZZ01XX      @READZ,"1",AGD06-01,XX
+ZZ01XX      IF ACCESS-OK 
+ZZ01XX         @DELETE,AGD06-01,XX
+ZZ01XX      END-IF   
+ZZ01XX    END-PERFORM.
 
-ZZ01H8 DELETE-AGD06-FN.
-ZZ01H8*--------------*
-ZZ01H8     EXIT. 
+ZZ01XX RESET-AGD06-FN.
+ZZ01XX*--------------*
+ZZ01XX     EXIT. 
 
 
-ZZ01H8 AUTO-SPLITTING.
-ZZ01H8*------------------*
+ZZ01XX AUTO-SPLITTING.
+ZZ01XX*------------------*
 
-ZZ01H8 AUTO-SPLITTING-FN.
-ZZ01H8*------------------*
-ZZ01H8      EXIT. 
+ZZ01XX AUTO-SPLITTING-FN.
+ZZ01XX*------------------*
+ZZ01XX      EXIT. 
 
       * =========================================
       * Methodological copy for Restarting handle
